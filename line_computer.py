@@ -168,9 +168,10 @@ class Noder():
 
 class Signaller():
     class Signal():
-        def __init__(self, start, direction):
-            self.start = start
-            self.direction = direction
+        def __init__(self, node):
+            self.node = node
+            self.start = node.position
+            self.direction = node.facing
             self.head = start
 
         def extend(self):
@@ -198,7 +199,7 @@ class Signaller():
         if index in self.signal_start_list:
             return
         for node in self.noder.get_nodes_at(index):
-            self.signal_list.append(Signaller.Signal(index, node.facing))
+            self.signal_list.append(Signaller.Signal(node))
         self.signal_start_list.append(index)
 
     def get_all_signals(self):
