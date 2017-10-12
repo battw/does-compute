@@ -1,3 +1,4 @@
+from math import sqrt
 
 class Vec():
     def __init__(self, x, y):

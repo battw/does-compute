@@ -25,7 +25,7 @@
 * get_all_objects() What should this return? The type of each object, the position of each object, and the direction of each object? This needs to provide enough info for the view to draw a representation of the model.
 
 #### Nodes
-invert()
+* invert()
 * Invert all nodes in a cell.
 * Place nodes.
 * Delete all nodes at a particular cell.
