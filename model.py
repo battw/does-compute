@@ -2,13 +2,18 @@ from utils import Vec
 
 class Model():
     def __init__(self):
+        self._cellar = Cellar()
         print("init model")
 
     def update(self, dt):
         pass# print("update model")
 
     def place_node(self, position, orientation):
-        YOU ARE HERE!
+        cell = self._cellar.get_cell(position)
+        try:
+            cell.add_node(Node(position, orientation))
+        except Exception:
+            return
         print("place node (pos={}, orient={})".format(position, orientation))
 
     def delete_nodes_at(self, position):
@@ -50,3 +55,14 @@ class Cell():
 
     def add_signal(self, signal):
         pass
+
+class Cellar():
+    def __init__(self):
+        self.cell_dict = dict()
+
+    def get_cell(self, position):
+        if position in self.cell_dict.keys():
+            return self.cell_dict[position]
+        new_cell = Cell()
+        self.cell_dict[position] = new_cell
+        return new_cell
