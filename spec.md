@@ -19,7 +19,7 @@
 ### Model
 #### Interface
 * update()
-* place_node(position, direction)
+* place_node(position, orientation)
 * delete_nodes_at(position)
 * invert_nodes_at(position)
 * get_all_objects() What should this return? The type of each object, the position of each object, and the direction of each object? This needs to provide enough info for the view to draw a representation of the model.
