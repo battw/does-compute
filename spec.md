@@ -7,22 +7,25 @@
 * Primative shapes to represent nodes/signals?
 * What background colour/texture?
 * Coloured signals for particular nodes
+* Lines or checks helping the user to visualise the route of a signal
 
 ### Controller
 * Place a node using the mouse and point it in a particular direction by draggng (left click).
 * Invert all nodes in a cell with a mouse click (right click).
-* Delete nodes at a particular cell using a click or button (middle for now).
+* Delete nodes at a particular cell using a click or button (hold right button?).
 * Select a colour for nodes in a cell so that they send out signals of that colour.
 
 
 ### Model
 #### Interface
-* place_node(position, node, direction)
+* update()
+* place_node(position, direction)
 * delete_nodes_at(position)
 * invert_nodes_at(position)
 * get_all_objects() What should this return? The type of each object, the position of each object, and the direction of each object? This needs to provide enough info for the view to draw a representation of the model.
 
 #### Nodes
+invert()
 * Invert all nodes in a cell.
 * Place nodes.
 * Delete all nodes at a particular cell.
