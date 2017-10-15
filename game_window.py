@@ -11,7 +11,7 @@ class GameWindow(pyglet.window.Window):
 
     def __init__(self):
         super(GameWindow, self).__init__()
-        self.cell_size = 20
+        self.cell_size = 40
         self.mouse_cell_index = Vec(-1,-1)
         self.model = Model()
         pyglet.clock.schedule_interval(self.model.update, 1)
@@ -24,6 +24,12 @@ class GameWindow(pyglet.window.Window):
         self.draw_mouse_cell()
         if self.ghost_node:
             self.draw_triangle(self.ghost_node.index, self.ghost_node.orientation)
+        for (cell_index, cell) in self.model.items():
+            if cell.signal_list:
+                self.draw_point(cell_index)
+            for node in cell.node_list:
+                self.draw_triangle(cell_index, node.orientation)
+
 
     def cell_location(self, cell_index):
         return Vec(cell_index.x * self.cell_size + self.cell_size // 2

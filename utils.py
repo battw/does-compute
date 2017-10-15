@@ -6,7 +6,7 @@ class Vec():
         self.y = int(round(y))
 
     def __str__(self):
-        return "x={}, y={}".format(self.x, self.y)
+        return "Vec({}, {})".format(self.x, self.y)
 
     def __add__(self, vec):
         return Vec(self.x + vec.x, self.y + vec.y)

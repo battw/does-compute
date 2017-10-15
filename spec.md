@@ -38,3 +38,7 @@
 * Nodes which have a signal ending at their position output a signal if they are not negated.
 * Nodes which are inverted output a signal unless they have a signal ending at their position.
 * Nodes which are already outputing a signal don't output a new signal when recieving a new input.
+
+
+## BUGS
+If node is added before mouse has moved for the first time it doesn't get displayed
