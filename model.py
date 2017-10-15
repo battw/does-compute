@@ -8,12 +8,28 @@ class Model():
         print("init model")
 
     def update(self, dt):
+        self.update_living_signals()
+        self.update_decaying_signals()
+
+    def update_living_signals(self):
         for signal in self.living_signal_list:
             signal.extend()
+            nodes = self.cellar.get_nodes(signal.end_position)
+            if nodes:
+                self.living_signal_list.remove(signal)
+            for node in nodes:
+                if not node.signal and not node.is_inverted:
+                    self.add_signal(node)
+                elif node.signal and node.is_inverted:
+                    self._kill_signal(node.signal)
+
+    def update_decaying_signals(self):
+        WHEN SIGNAL DECAYS UNTIL IT REACHES another node the input to that node isn't sorted out
         for signal in self.decaying_signal_list:
             signal.decay()
             if signal.start_position == signal.end_position + signal.orientation:
                 self.decaying_signal_list.remove(signal)
+
 
     def place_node(self, position, orientation):
         self.cellar.add_node(Node(position, orientation, self.cellar))
@@ -23,30 +39,32 @@ class Model():
         self.cellar.delete_nodes(position)
         for signal in self.cellar.get_signals(position):
             if signal.start_position == position and signal in self.living_signal_list:
-                self.living_signal_list.remove(signal)
-                self.decaying_signal_list.append(signal)
-                signal.decay()
+                self._kill_signal(signal)
             elif signal.end_position == position:
                 self.living_signal_list.append(signal)
         print("delete nodes (pos={})".format(position))
 
     def invert_nodes_at(self, position):
         for node in self.cellar.get_nodes(position):
-            assert node.signal
             node.invert()
             if node.signal:
-                self.living_signal_list.remove(node.signal)
-                self.decaying_signal_list.append(node.signal)
-                node.signal.decay()
-                node.signal = None
+                self._kill_signal(node.signal)
             else:
-                node.signal = Signal(position, node.orientation, node, self.cellar)
-                self.add_signal(node.signal)
+                self.add_signal(node)
         print("invert nodes (pos={})".format(position))
 
-    def add_signal(self, signal):
-        self.cellar.add_signal(signal, signal.start_position)
+    def add_signal(self, node):
+        signal = Signal(node, self.cellar)
         self.living_signal_list.append(signal)
+
+
+    def _kill_signal(self, signal):
+        if signal in self.living_signal_list:
+            self.living_signal_list.remove(signal)
+        if signal not in self.decaying_signal_list:
+            self.decaying_signal_list.append(signal)
+            signal.decay() #This keeps the timing the same as for living signals.
+
 
 
     def items(self):
@@ -66,12 +84,14 @@ class Node():
 
 
 class Signal():
-    def __init__(self, position, orientation, node, cellar):
-        self.start_position= position
-        self.end_position = position
-        self.orientation = orientation
+    def __init__(self, node, cellar):
+        self.start_position = node.position
+        self.end_position = node.position
+        self.orientation = node.orientation
         self.node = node
+        node.signal = self
         self.cellar = cellar
+        cellar.add_signal(self, self.start_position)
 
 
     def extend(self):
@@ -80,6 +100,9 @@ class Signal():
         self.cellar.add_signal(self, next_position)
 
     def decay(self):
+        if self.node:
+            self.node.signal = None
+            self.node = None
         self.cellar.delete_signal(self, self.start_position)
         self.start_position += self.orientation
         print("decay")
@@ -92,6 +115,9 @@ class Cell():
         self.position = position
 
     def add_node(self, node):
+        for other in self.node_list:
+            if node.orientation == other.orientation:
+                return
         self.node_list.append(node)
 
     def has_node_with_orientation(self, orientation):
@@ -141,7 +167,7 @@ class Cellar():
     def get_nodes(self, position):
         cell = self._get_cell(position)
         self._remove_cell_if_empty(position)
-        return iter(cell.node_list)
+        return list(cell.node_list)
 
     def add_signal(self, signal, position):
         cell = self._get_cell(position)
@@ -160,7 +186,7 @@ class Cellar():
     def get_signals(self, position):
         cell = self._get_cell(position)
         self._remove_cell_if_empty(position)
-        return iter(cell.signal_list)
+        return list(cell.signal_list)
 
     def items(self):
         return self._cell_dict.items()
