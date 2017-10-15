@@ -12,6 +12,8 @@ class Model():
             signal.extend()
         for signal in self.decaying_signal_list:
             signal.decay()
+            if signal.start_position == signal.end_position + signal.orientation:
+                self.decaying_signal_list.remove(signal)
 
     def place_node(self, position, orientation):
         self.cellar.add_node(Node(position, orientation, self.cellar))
@@ -20,19 +22,22 @@ class Model():
     def delete_nodes_at(self, position):
         self.cellar.delete_nodes(position)
         for signal in self.cellar.get_signals(position):
-            if signal.start_position == position:
+            if signal.start_position == position and signal in self.living_signal_list:
                 self.living_signal_list.remove(signal)
                 self.decaying_signal_list.append(signal)
+                signal.decay()
             elif signal.end_position == position:
                 self.living_signal_list.append(signal)
         print("delete nodes (pos={})".format(position))
 
     def invert_nodes_at(self, position):
         for node in self.cellar.get_nodes(position):
+            assert node.signal
             node.invert()
             if node.signal:
                 self.living_signal_list.remove(node.signal)
                 self.decaying_signal_list.append(node.signal)
+                node.signal.decay()
                 node.signal = None
             else:
                 node.signal = Signal(position, node.orientation, node, self.cellar)
@@ -75,6 +80,8 @@ class Signal():
         self.cellar.add_signal(self, next_position)
 
     def decay(self):
+        self.cellar.delete_signal(self, self.start_position)
+        self.start_position += self.orientation
         print("decay")
 
 
@@ -98,15 +105,20 @@ class Cell():
             node.invert()
 
     def delete_nodes(self):
-        self.node_list = list()
-
+        self.node_list.clear()
 
     def delete_signals(self):
-        self.signal_list = list()
+        self.signal_list.clear()
+
+    def delete_signal(self, signal):
+        assert signal in self.signal_list
+
+        if signal in self.signal_list:
+            self.signal_list.remove(signal)
 
     def is_recieving_signal(self):
         for signal in self.signal_list:
-            if signal.start_position!= self.position:
+            if signal.start_position != self.position:
                 return True
         return False
 
@@ -138,6 +150,11 @@ class Cellar():
     def delete_signals(self, position):
         cell = self._get_cell(position)
         cell.delete_signals(position)
+        self._remove_cell_if_empty(position)
+
+    def delete_signal(self, signal, position):
+        cell = self._get_cell(position)
+        cell.delete_signal(signal)
         self._remove_cell_if_empty(position)
 
     def get_signals(self, position):
