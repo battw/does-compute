@@ -1,5 +1,5 @@
 import pyglet
-from pyglet.gl import GL_POINTS, GL_TRIANGLES, GL_LINES
+from pyglet.gl import GL_POINTS, GL_TRIANGLES, GL_LINES, GL_POLYGON, glClearColor
 
 from model import Model
 from utils import Vec
@@ -10,8 +10,9 @@ class GameWindow(pyglet.window.Window):
             self.orientation = orientation
 
     def __init__(self):
-        super(GameWindow, self).__init__()
-        self.cell_size = 40
+        super(GameWindow, self).__init__(width=1000, height=1000)
+        # glClearColor(1,1,1,1)
+        self.cell_size = 20
         self.mouse_cell_index = Vec(-1,-1)
         self.model = Model()
         pyglet.clock.schedule_interval(self.model.update, 1)
@@ -25,10 +26,12 @@ class GameWindow(pyglet.window.Window):
         if self.ghost_node:
             self.draw_triangle(self.ghost_node.index, self.ghost_node.orientation)
         for (cell_index, cell) in self.model.items():
-            if cell.signal_list:
+            if cell.signal_set:
                 self.draw_point(cell_index)
             for node in cell.node_list:
                 self.draw_triangle(cell_index, node.orientation)
+                if node.is_inverted:
+                    self.draw_circle(cell_index, node.orientation)
 
 
     def cell_location(self, cell_index):
@@ -45,15 +48,29 @@ class GameWindow(pyglet.window.Window):
 
     def draw_triangle(self, cell_index, orientation):
         position = self.cell_location(cell_index)
-        length = self.cell_size // 2 - self.cell_size // 3
+        length = self.cell_size * 8 // 10
         width = self.cell_size // 2 - self.cell_size // 5
         len_vec = orientation.normalise(length)
         wid_vec = Vec(orientation.y, -orientation.x).normalise(width)
         point = position + len_vec
-        left_corner = position - len_vec - wid_vec
-        right_corner = position - len_vec + wid_vec
+        left_corner = position - wid_vec
+        right_corner = position + wid_vec
         triangle_vertices = (*left_corner, *right_corner, *point)
         pyglet.graphics.draw(3, GL_TRIANGLES, ('v2i', triangle_vertices))
+
+    def draw_circle(self, cell_index, orientation):
+        diameter = self.cell_size // 10 
+        circle = [Vec(-diameter, -diameter), Vec(diameter, -diameter)
+        , Vec(diameter, diameter), Vec(-diameter, diameter)]
+        distance = self.cell_size * 8 // 10
+        position = self.cell_location(cell_index) + orientation.normalise(distance)
+        circle = [v + position for v in circle]
+        circle2 = list()
+        for v in circle:
+            circle2.append(v.x)
+            circle2.append(v.y)
+        dist = self.cell_size
+        pyglet.graphics.draw(4, GL_POLYGON, ('v2i', circle2))
 
 
     def point_ghost_node_towards_mouse(self):
@@ -82,9 +99,9 @@ class GameWindow(pyglet.window.Window):
             self.ghost_node = None
         elif button == 4:
             if self.right_click_timer.update_time() < 0.5:
-                self.model.invert_nodes_at(self.mouse_cell_index)
+                self.model.invert_nodes(self.mouse_cell_index)
             else:
-                self.model.delete_nodes_at(self.mouse_cell_index)
+                self.model.delete_nodes(self.mouse_cell_index)
 
 
 if __name__ == '__main__':
