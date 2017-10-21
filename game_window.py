@@ -1,7 +1,7 @@
 import pyglet
 from pyglet.gl import GL_POINTS, GL_TRIANGLES, GL_LINES, GL_POLYGON, glClearColor
 
-from model import Model
+from model import Model, _Cellar
 from utils import Vec
 class GameWindow(pyglet.window.Window):
     class GhostNode():
@@ -12,10 +12,10 @@ class GameWindow(pyglet.window.Window):
     def __init__(self):
         super(GameWindow, self).__init__(width=1000, height=1000)
         # glClearColor(1,1,1,1)
-        self.cell_size = 50
+        self.cell_size = 20
         self.mouse_cell_index = Vec(-1,-1)
         self.model = Model()
-        pyglet.clock.schedule_interval(self.model.update, 1)
+        pyglet.clock.schedule_interval(self.model.update, 0.001)
         self.ghost_node = None
         self.right_click_timer = pyglet.clock.Clock()
         # self.set_mouse_visible(False)
@@ -25,13 +25,14 @@ class GameWindow(pyglet.window.Window):
         self.draw_mouse_cell()
         if self.ghost_node:
             self.draw_triangle(self.ghost_node.index, self.ghost_node.orientation)
-        for (cell_index, cell) in self.model.items():
-            if cell.signal_set:
-                self.draw_point(cell_index)
-            for node in cell.node_list:
-                self.draw_triangle(cell_index, node.orientation)
-                if node.is_inverted:
-                    self.draw_circle(cell_index, node.orientation)
+        for (cell_index, items) in self.model.items():
+            for item in items:
+                if isinstance(item, _Cellar._Signal):
+                    self.draw_point(cell_index)
+                if isinstance(item, _Cellar._Node):
+                    self.draw_triangle(cell_index, item.orientation)
+                    if item.is_inverted:
+                        self.draw_circle(cell_index, item.orientation)
 
 
     def cell_location(self, cell_index):
