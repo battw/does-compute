@@ -12,7 +12,7 @@ class GameWindow(pyglet.window.Window):
     def __init__(self):
         super(GameWindow, self).__init__(width=1000, height=1000)
         # glClearColor(1,1,1,1)
-        self.cell_size = 20
+        self.cell_size = 50
         self.mouse_cell_index = Vec(-1,-1)
         self.model = Model()
         pyglet.clock.schedule_interval(self.model.update, 1)
@@ -59,7 +59,7 @@ class GameWindow(pyglet.window.Window):
         pyglet.graphics.draw(3, GL_TRIANGLES, ('v2i', triangle_vertices))
 
     def draw_circle(self, cell_index, orientation):
-        diameter = self.cell_size // 10 
+        diameter = self.cell_size // 10
         circle = [Vec(-diameter, -diameter), Vec(diameter, -diameter)
         , Vec(diameter, diameter), Vec(-diameter, diameter)]
         distance = self.cell_size * 8 // 10

@@ -39,6 +39,7 @@ class Node():
 
     def update(self):
         signals = self.cellar.get_signals(self.position)
+        signals = [s for s in signals if s.start_position != self.position]
         if signals:
             if self.is_inverted:
                 self._decay_signal()
@@ -73,15 +74,16 @@ class Node():
 
 class Signal():
     def __init__(self, node):
-        self.start_position = node.position + node.orientation
+        self.start_position = node.position
         self.end_position = node.position
         self.orientation = node.orientation
         self.node = node
         node.signal = self
         self._cellar = node.cellar
+        self._cellar.add_signal(self, self.start_position)
         self._is_growing = False
         self._is_decaying = False
-        self._path_list = list()
+        self._path_list = [self.start_position]
 
 
     def update(self):
@@ -101,7 +103,6 @@ class Signal():
 
 
     def _grow(self):
-        print("grow")
         self.end_position += self.orientation
         self._cellar.add_signal(self, self.end_position)
         self._path_list.append(self.end_position)
@@ -112,7 +113,6 @@ class Signal():
                 node.update()
 
     def _decay(self):
-        print("decay")
         self._cellar.delete_signal(self, self.start_position)
         self._path_list.remove(self.start_position)
         for node in self._cellar.get_nodes(self.start_position):
@@ -126,7 +126,7 @@ class Signal():
 
     def start_growing(self):
         self._is_growing = True
-        self._cellar.updating_signal_list.append(self)
+        self._cellar.add_to_updating_signals(self)
 
     def stop_growing(self):
         self._is_growing = False
@@ -137,9 +137,11 @@ class Signal():
     def start_decaying(self):
         self.node = None
         self._is_decaying = True
-        self._cellar.updating_signal_list.append(self)
+        self._cellar.add_to_updating_signals(self)
 
     def die(self):
+        self.stop_growing()
+        self.stop_decaying()
         if self in self._cellar.updating_signal_list:
             self._cellar.updating_signal_list.remove(self)
         if self.node:
@@ -258,6 +260,10 @@ class Cellar():
         cell = self._get_cell(position)
         self._remove_cell_if_empty(position)
         return list(cell.signal_set)
+
+    def add_to_updating_signals(self, signal):
+        if signal not in self.updating_signal_list:
+            self.updating_signal_list.insert(0, signal)
 
     def items(self):
         return self._cell_dict.items()
