@@ -56,7 +56,7 @@ class GameWindow(pyglet.window.Window):
         point = position + len_vec
         left_corner = position - wid_vec
         right_corner = position + wid_vec
-        triangle_vertices = (*left_corner, *right_corner, *point)
+        triangle_vertices = (left_corner.x, left_corner.y, right_corner.x, right_corner.y, point.x, point.y)
         pyglet.graphics.draw(3, GL_TRIANGLES, ('v2i', triangle_vertices))
 
     def draw_circle(self, cell_index, orientation):
@@ -103,6 +103,12 @@ class GameWindow(pyglet.window.Window):
                 self.model.invert_nodes(self.mouse_cell_index)
             else:
                 self.model.delete_nodes(self.mouse_cell_index)
+
+
+class Drawer():
+    def __init__(self, game_window):
+        self.game_window = game_window
+
 
 
 if __name__ == '__main__':
