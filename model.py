@@ -62,7 +62,7 @@ class _Cellar():
                     new_signal_dict[output_signal.position].append(output_signal)
 
         self._signal_dict = new_signal_dict
-        print(len(self._signal_dict.keys()))
+        # print(len(self._signal_dict.keys()))
 
     def is_out_of_bounds(self, vec):
         return vec.x > self._bounds.x or vec.y > self._bounds.y or vec.x < 0 or vec.y < 0

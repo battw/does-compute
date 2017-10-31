@@ -1,8 +1,11 @@
 import pyglet
-from pyglet.gl import GL_POINTS, GL_TRIANGLES, GL_LINES, GL_POLYGON, glClearColor
+from pyglet.gl import *
 
 from model import Model, _Cellar
 from utils import Vec
+import imager
+
+
 class GameWindow(pyglet.window.Window):
     class GhostNode():
         def __init__(self, index, orientation):
@@ -10,68 +13,34 @@ class GameWindow(pyglet.window.Window):
             self.orientation = orientation
 
     def __init__(self):
-        super(GameWindow, self).__init__(width=1000, height=1000)
+        super(GameWindow, self).__init__(width=2000, height=1000)
+        self.init_gl()
         # glClearColor(1,1,1,1)
         self.cell_size = 20
         self.mouse_cell_index = Vec(-1,-1)
         self.model = Model()
-        pyglet.clock.schedule_interval(self.model.update, 0.001)
+        pyglet.clock.schedule_interval(self.model.update, 0.01)
         self.ghost_node = None
         self.right_click_timer = pyglet.clock.Clock()
+        self.drawer = _Drawer(self)
         # self.set_mouse_visible(False)
 
+    def init_gl(self):
+        # glEnable(GL_BLEND)
+        # glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        pass
+
     def on_draw(self):
-        self.clear()
-        self.draw_mouse_cell()
-        if self.ghost_node:
-            self.draw_triangle(self.ghost_node.index, self.ghost_node.orientation)
-        for (cell_index, items) in self.model.items():
-            for item in items:
-                if isinstance(item, _Cellar._Signal):
-                    self.draw_point(cell_index)
-                if isinstance(item, _Cellar._Node):
-                    self.draw_triangle(cell_index, item.orientation)
-                    if item.is_inverted:
-                        self.draw_circle(cell_index, item.orientation)
+        # self.draw_mouse_cell()
+        self.drawer.draw_model(self.model)
+        # if self.ghost_node:
+        #     self.draw_triangle(self.ghost_node.index, self.ghost_node.orientation)
 
 
     def cell_location(self, cell_index):
         return Vec(cell_index.x * self.cell_size + self.cell_size // 2
         , cell_index.y * self.cell_size + self.cell_size // 2)
 
-    def draw_mouse_cell(self):
-        # self.draw_triangle(self.mouse_cell_index, 0)
-        self.draw_point(self.mouse_cell_index)
-
-    def draw_point(self, cell_index):
-        cell_location = self.cell_location(cell_index)
-        pyglet.graphics.draw(1, GL_POINTS, ('v2i', cell_location.to_tuple()))
-
-    def draw_triangle(self, cell_index, orientation):
-        position = self.cell_location(cell_index)
-        length = self.cell_size * 8 // 10
-        width = self.cell_size // 2 - self.cell_size // 5
-        len_vec = orientation.normalise(length)
-        wid_vec = Vec(orientation.y, -orientation.x).normalise(width)
-        point = position + len_vec
-        left_corner = position - wid_vec
-        right_corner = position + wid_vec
-        triangle_vertices = (left_corner.x, left_corner.y, right_corner.x, right_corner.y, point.x, point.y)
-        pyglet.graphics.draw(3, GL_TRIANGLES, ('v2i', triangle_vertices))
-
-    def draw_circle(self, cell_index, orientation):
-        diameter = self.cell_size // 10
-        circle = [Vec(-diameter, -diameter), Vec(diameter, -diameter)
-        , Vec(diameter, diameter), Vec(-diameter, diameter)]
-        distance = self.cell_size * 8 // 10
-        position = self.cell_location(cell_index) + orientation.normalise(distance)
-        circle = [v + position for v in circle]
-        circle2 = list()
-        for v in circle:
-            circle2.append(v.x)
-            circle2.append(v.y)
-        dist = self.cell_size
-        pyglet.graphics.draw(4, GL_POLYGON, ('v2i', circle2))
 
 
     def point_ghost_node_towards_mouse(self):
@@ -105,9 +74,67 @@ class GameWindow(pyglet.window.Window):
                 self.model.delete_nodes(self.mouse_cell_index)
 
 
-class Drawer():
+class _Drawer():
+
+
     def __init__(self, game_window):
-        self.game_window = game_window
+        self._game_window = game_window
+        self._signal_sprite = self._get_signal_sprite()
+        self._background_image = self._get_background_image_data()
+
+
+    def draw_model(self, model):
+        self._game_window.clear()
+        self.draw_background()
+        for (cell_index, items) in model.items():
+            for item in items:
+                if isinstance(item, _Cellar._Signal):
+                    self.draw_signal(cell_index)
+                if isinstance(item, _Cellar._Node):
+                    self.draw_node(cell_index, item.orientation)
+                    if item.is_inverted:
+                        self.draw_circle(cell_index, item.orientation)
+
+    def draw_background(self):
+        self._background_image.blit(0,0)
+
+    def draw_gui(self, input):
+        pass
+        #draw gui (currently the ghost node wotsit)
+    def draw_mouse_cell(self):
+        # self.draw_triangle(self.mouse_cell_index, 0)
+        self.draw_point(self.mouse_cell_index)
+
+    def draw_point(self, cell_index):
+        cell_location = self._game_window.cell_location(cell_index)
+        pyglet.graphics.draw(1, GL_POINTS, ('v2i', cell_location.to_tuple()))
+
+    def draw_node(self, cell_index, orientation):
+        pass
+
+    def draw_signal(self, cell_index):
+        #TODO create gl helper functions to do this stuff
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
+        cell_size_vec = Vec(self._game_window.cell_size / 2, self._game_window.cell_size / 2)
+        position = self._game_window.cell_location(cell_index) - cell_size_vec
+        self._signal_sprite.set_position(*position)
+        self._signal_sprite.draw()
+
+    def draw_circle(self, cell_index, orientation):
+        pass
+
+    def _get_signal_sprite(self):
+        size = self._game_window.cell_size
+        radius = size // 4
+        image_data =  imager.CircleImageData(size, radius, (255,0,0))
+        return pyglet.sprite.Sprite(image_data)
+
+    def _get_background_image_data(self):
+        size_vec = Vec(self._game_window.width, self._game_window.height)
+        cell_size = self._game_window.cell_size
+        return imager.CheckeredBackgroundImageData(size_vec, cell_size, (240,240,240), (255,255,255))
 
 
 
