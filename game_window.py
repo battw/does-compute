@@ -80,6 +80,8 @@ class _Drawer():
     def __init__(self, game_window):
         self._game_window = game_window
         self._signal_sprite = self._get_signal_sprite()
+        self._node_sprite = self._get_node_sprite()
+        self._neg_node_sprite = self._get_neg_node_sprite()
         self._background_image = self._get_background_image_data()
 
 
@@ -91,9 +93,7 @@ class _Drawer():
                 if isinstance(item, _Cellar._Signal):
                     self.draw_signal(cell_index)
                 if isinstance(item, _Cellar._Node):
-                    self.draw_node(cell_index, item.orientation)
-                    if item.is_inverted:
-                        self.draw_circle(cell_index, item.orientation)
+                    self.draw_node(cell_index, item.orientation, inverted=item.is_inverted)
 
     def draw_background(self):
         self._background_image.blit(0,0)
@@ -109,8 +109,15 @@ class _Drawer():
         cell_location = self._game_window.cell_location(cell_index)
         pyglet.graphics.draw(1, GL_POINTS, ('v2i', cell_location.to_tuple()))
 
-    def draw_node(self, cell_index, orientation):
-        pass
+    def draw_node(self, cell_index, orientation, inverted=False):
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        cell_size_vec = Vec(self._game_window.cell_size / 2, self._game_window.cell_size / 2)
+        position = self._game_window.cell_location(cell_index)
+        sprite = self._node_sprite if not inverted else self._neg_node_sprite
+        sprite.set_position(*position)
+        sprite.rotation = -(orientation.angle() - 90)
+        sprite.draw()
 
     def draw_signal(self, cell_index):
         #TODO create gl helper functions to do this stuff
@@ -130,6 +137,24 @@ class _Drawer():
         radius = size // 4
         image_data =  imager.CircleImageData(size, radius, (255,0,0))
         return pyglet.sprite.Sprite(image_data)
+
+    def _get_node_sprite(self):
+        length = self._game_window.cell_size
+        width = self._game_window.cell_size
+        image_data = imager.IsoTriangleImageData(length, width, (0,255,0))
+        image_data.anchor_x = width // 2
+        image_data.anchor_y = 0
+        return pyglet.sprite.Sprite(image_data)
+
+    def _get_neg_node_sprite(self):
+        """The sprite for a negated node."""
+        length = self._game_window.cell_size
+        width = self._game_window.cell_size
+        image_data = imager.IsoTriangleImageData(length, width, (0,0,0))
+        image_data.anchor_x = width // 2
+        image_data.anchor_y = 0
+        return pyglet.sprite.Sprite(image_data)
+
 
     def _get_background_image_data(self):
         size_vec = Vec(self._game_window.width, self._game_window.height)

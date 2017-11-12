@@ -34,12 +34,15 @@ class CheckeredBackgroundImageData(ImageData):
         self.cell_size = cell_size
         format = "RGB"
         data = self._make_bytes()
-        super(CheckeredBackgroundImageData, self).__init__(size_vec.x, size_vec.y, format, data)
+        super(CheckeredBackgroundImageData, self).__init__(
+                                        size_vec.x, size_vec.y, format, data)
 
     def _make_bytes(self):
         def is_colour1(x, y):
-            return (x % (2*self.cell_size) > self.cell_size and y % (2*self.cell_size) > self.cell_size
-                or x % (2*self.cell_size) < self.cell_size and y % (2*self.cell_size) < self.cell_size)
+            return (x % (2*self.cell_size) > self.cell_size
+                    and y % (2*self.cell_size) > self.cell_size
+                or x % (2*self.cell_size) < self.cell_size
+                    and y % (2*self.cell_size) < self.cell_size)
 
         numbers = list()
         for y in range(self.size_vec.y):
@@ -49,4 +52,29 @@ class CheckeredBackgroundImageData(ImageData):
                 else:
                     numbers.extend(self.colour2)
 
+        return bytes(numbers)
+
+class IsoTriangleImageData(ImageData):
+    def __init__(self, length, width, colour):
+        self._length = length
+        self._width = width
+        self._colour = colour
+        format = "RBGA"
+        data = self._make_bytes()
+        super(IsoTriangleImageData, self).__init__(width, length, format, data)
+
+    def _make_bytes(self):
+        def is_inside_triangle(x, y):
+
+            return (x > y * self._width / 2 / self._length
+                    and x < self._width / 2 * (2 - y / self._length))
+
+        numbers = list()
+        for y in range(self._length):
+            for x in range(self._width):
+                if is_inside_triangle(x, y):
+                    numbers.extend(self._colour)
+                    numbers.extend((255,))
+                else:
+                    numbers.extend((0,0,0,0))
         return bytes(numbers)

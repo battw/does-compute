@@ -1,4 +1,4 @@
-from math import sqrt
+from math import sqrt, atan2, degrees
 
 class Vec():
     def __init__(self, x, y):
@@ -26,6 +26,10 @@ class Vec():
 
     def to_tuple(self):
         return (self.x, self.y)
+
+    def angle(self):
+        """The angle with the positive x axis in degrees."""
+        return degrees(atan2(self.y, self.x))
 
     def __iter__(self):
         self._iter_index = -1
