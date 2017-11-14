@@ -10,10 +10,15 @@
 * Lines or checks helping the user to visualise the route of a signal
 
 ### Controller
-* Place a node using the mouse and point it in a particular direction by draggng (left click).
-* Invert all nodes in a cell with a mouse click (right click).
-* Delete nodes at a particular cell using a click or button (hold right button?).
+* ~~Place a node using the mouse and point it in a particular direction by draggng (left click).~~
+* ~~Invert all nodes in a cell with a mouse click (right click).~~
+* ~~Delete nodes at a particular cell using a click or button (hold right button?).~~
 * Select a colour for nodes in a cell so that they send out signals of that colour.
+* Give some indication to the user when the button has been held enough to delete nodes.
+* Delete/negate individual nodes by clicking on their points.
+* Save games.
+* Copy and paste.
+* Clear signals.
 
 
 ### Model

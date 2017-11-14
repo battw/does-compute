@@ -1,5 +1,6 @@
 import pyglet
 from pyglet.gl import *
+from pyglet.window.key import *
 
 from model import Model, _Cellar
 from utils import Vec
@@ -19,7 +20,7 @@ class GameWindow(pyglet.window.Window):
         self.cell_size = 20
         self.mouse_cell_index = Vec(-1,-1)
         self.model = Model()
-        pyglet.clock.schedule_interval(self.model.update, 0.01)
+        pyglet.clock.schedule_interval(self.model.update, 1)
         self.ghost_node = None
         self.right_click_timer = pyglet.clock.Clock()
         self.drawer = _Drawer(self)
@@ -73,10 +74,16 @@ class GameWindow(pyglet.window.Window):
             else:
                 self.model.delete_nodes(self.mouse_cell_index)
 
+    def on_key_press(self, symbol, modifiers):
+        super(GameWindow, self).on_key_press(symbol, modifiers)
+        if symbol == SPACE:
+            self.model.clear_signals()
+        if symbol == X:
+            self.model.copy_nodes(Vec(3,5), Vec(10, 9))
+
+
 
 class _Drawer():
-
-
     def __init__(self, game_window):
         self._game_window = game_window
         self._signal_sprite = self._get_signal_sprite()
@@ -141,7 +148,7 @@ class _Drawer():
     def _get_node_sprite(self):
         length = self._game_window.cell_size
         width = self._game_window.cell_size
-        image_data = imager.IsoTriangleImageData(length, width, (0,255,0))
+        image_data = imager.IsoTriangleImageData(length, width, (0,0,255))
         image_data.anchor_x = width // 2
         image_data.anchor_y = 0
         return pyglet.sprite.Sprite(image_data)

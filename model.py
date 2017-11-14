@@ -19,6 +19,15 @@ class Model():
     def items(self):
         return self._cellar.items()
 
+    def clear_signals(self):
+        self._cellar.clear_signals()
+
+    def copy_nodes(self, bottom_left_vec, top_right_vec):
+        self._cellar.copy_nodes(bottom_left_vec, top_right_vec)
+
+    def save_as(self, name):
+        pass
+
 
 class _Cellar():
     class _Node():
@@ -81,6 +90,16 @@ class _Cellar():
         if position in self._node_dict.keys():
             del self._node_dict[position]
 
+    def copy_nodes(self, bottom_left_vec, top_right_vec):
+        def is_included(position):
+            (x,y) = position
+            return (bottom_left_vec.x <= x <= top_right_vec.x
+                    and bottom_left_vec.y <= y <= top_right_vec.y)
+        included_node_dict_items = filter(lambda item: is_included(item[0]), self._node_dict.items())
+        print(dict(included_node_dict_items))
+        return dict(included_node_dict_items)
+
+
     def invert_nodes(self, position):
         if position in self._node_dict.keys():
             for node in self._node_dict[position]:
@@ -92,3 +111,6 @@ class _Cellar():
     def _have_different_orientations(self, item, items):
         orientations = [i.orientation for i in items]
         return item.orientation not in orientations
+
+    def clear_signals(self):
+        self._signal_dict = dict()
