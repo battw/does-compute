@@ -1,6 +1,7 @@
 import pyglet
 from pyglet.gl import *
 from pyglet.window.key import *
+import itertools
 
 from model import Model, _Cellar
 from utils import Vec
@@ -20,10 +21,12 @@ class GameWindow(pyglet.window.Window):
         self.cell_size = 20
         self.mouse_cell_index = Vec(-1,-1)
         self.model = Model()
-        pyglet.clock.schedule_interval(self.model.update, 1)
+        pyglet.clock.schedule_interval(self.model.update, 0.1)
         self.ghost_node = None
         self.right_click_timer = pyglet.clock.Clock()
         self.drawer = _Drawer(self)
+        self.input_state_cycle = itertools.cycle(["DRAW", "COPY PASTE"])
+        self.input_state = next(self.input_state_cycle)
         # self.set_mouse_visible(False)
 
     def init_gl(self):
@@ -79,7 +82,8 @@ class GameWindow(pyglet.window.Window):
         if symbol == SPACE:
             self.model.clear_signals()
         if symbol == X:
-            self.model.copy_nodes(Vec(3,5), Vec(10, 9))
+            self.input_state = next(self.input_state_cycle)
+
 
 
 

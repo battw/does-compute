@@ -18,7 +18,9 @@
 * Delete/negate individual nodes by clicking on their points.
 * Save games.
 * Copy and paste.
-* Clear signals.
+* When copying blocks of nodes, be able to rotate and mirror the blocks.
+* ~~Clear signals.~~
+
 
 
 ### Model
