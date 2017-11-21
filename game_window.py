@@ -2,10 +2,12 @@ import pyglet
 from pyglet.gl import *
 from pyglet.window.key import *
 import itertools
+import time
 
 from model import Model, _Cellar
 from utils import Vec
 import imager
+
 
 
 class GameWindow(pyglet.window.Window):
@@ -20,14 +22,21 @@ class GameWindow(pyglet.window.Window):
         # glClearColor(1,1,1,1)
         self.cell_size = 20
         self.mouse_cell_index = Vec(-1,-1)
+        self.mouse_position = Vec(0,0)
         self.model = Model()
         pyglet.clock.schedule_interval(self.model.update, 0.1)
         self.ghost_node = None
-        self.right_click_timer = pyglet.clock.Clock()
         self.drawer = _Drawer(self)
         self.input_state_cycle = itertools.cycle(["DRAW", "COPY PASTE"])
         self.input_state = next(self.input_state_cycle)
         # self.set_mouse_visible(False)
+        self.mouse_input = MouseInputHandler()
+        self.mouse_input.register_callback(1, "CLICK", lambda: print("left click func"))
+        self.mouse_input.register_callback(1, "HOLD", lambda: print("left hold func"))
+        self.mouse_input.register_callback(1, "DRAG", lambda x: print("left drag func"))
+        self.mouse_input.register_callback(4, "CLICK", lambda: print("right click func"))
+        self.mouse_input.register_callback(4, "HOLD", lambda: print("right hold func"))
+        self.mouse_input.register_callback(4, "DRAG", lambda x: print("right drag func"))
 
     def init_gl(self):
         # glEnable(GL_BLEND)
@@ -36,16 +45,14 @@ class GameWindow(pyglet.window.Window):
 
     def on_draw(self):
         # self.draw_mouse_cell()
+        self.mouse_input.update(self.mouse_position)
         self.drawer.draw_model(self.model)
         # if self.ghost_node:
         #     self.draw_triangle(self.ghost_node.index, self.ghost_node.orientation)
 
-
     def cell_location(self, cell_index):
         return Vec(cell_index.x * self.cell_size + self.cell_size // 2
         , cell_index.y * self.cell_size + self.cell_size // 2)
-
-
 
     def point_ghost_node_towards_mouse(self):
         diff = self.mouse_cell_index - self.ghost_node.index
@@ -53,29 +60,18 @@ class GameWindow(pyglet.window.Window):
             self.ghost_node.orientation = diff.normalise()
 
     def on_mouse_motion(self, x, y, dx, dy):
+        self.mouse_position = Vec(x,y)
         self.mouse_cell_index = Vec(x // self.cell_size, y // self.cell_size)
 
     def on_mouse_press(self, x, y, button, modifiers):
-        if button == 1:
-            self.ghost_node = GameWindow.GhostNode(self.mouse_cell_index, Vec(0,1))
-        elif button == 4:
-            self.right_click_timer.update_time()
-            # self.model.nvert_nodes_at(self.mouse_cell_index)
+        self.mouse_input.press(button, Vec(x,y))
 
     def on_mouse_drag(self, x, y, dx, dy, button, modifiers):
+        self.mouse_position = Vec(x,y)
         self.mouse_cell_index = Vec(x // self.cell_size, y // self.cell_size)
-        if self.ghost_node:
-            self.point_ghost_node_towards_mouse()
 
     def on_mouse_release(self, x, y, button, modifiers):
-        if button == 1 and self.ghost_node:
-            self.model.place_node(self.ghost_node.index, self.ghost_node.orientation)
-            self.ghost_node = None
-        elif button == 4:
-            if self.right_click_timer.update_time() < 0.5:
-                self.model.invert_nodes(self.mouse_cell_index)
-            else:
-                self.model.delete_nodes(self.mouse_cell_index)
+        self.mouse_input.release(button)
 
     def on_key_press(self, symbol, modifiers):
         super(GameWindow, self).on_key_press(symbol, modifiers)
@@ -83,7 +79,6 @@ class GameWindow(pyglet.window.Window):
             self.model.clear_signals()
         if symbol == X:
             self.input_state = next(self.input_state_cycle)
-
 
 
 
@@ -171,6 +166,61 @@ class _Drawer():
         size_vec = Vec(self._game_window.width, self._game_window.height)
         cell_size = self._game_window.cell_size
         return imager.CheckeredBackgroundImageData(size_vec, cell_size, (240,240,240), (255,255,255))
+
+class MouseInputHandler():
+
+    def __init__(self, hold_time = 0.5):
+        """hold_time is the minimum time a button needs to held before the
+        the button is considered to be held rather than clicked."""
+        self.min_hold_time = hold_time
+        self.init_button_state()
+        self._callback_dict = dict()
+
+    def init_button_state(self):
+        self.pressed_button = None
+        self.pressed_button_state = None
+        self.press_position = None
+        self.press_time = None
+        self.drag_vector = None
+
+    def press(self, button, position):
+        """Call this when a mouse button is pressed. """
+        if self.pressed_button != None:
+            self.init_button_state()
+            return
+        self.pressed_button = button
+        self.pressed_button_state = "CLICK"
+        self.press_position = position
+        self.press_time = time.perf_counter()
+
+    def release(self, button):
+        """Call this when a mouse button is released.
+        """
+        if button == self.pressed_button:
+            callback = self._callback_dict.get((button, self.pressed_button_state))
+            if callback != None:
+                if self.pressed_button_state == "DRAG":
+                    callback(self.drag_vector)
+                elif self.pressed_button_state in ["CLICK", "HOLD"]:
+                    callback()
+
+        self.init_button_state()
+
+    def update(self, mouse_position):
+        """Call this every frame."""
+        if self.pressed_button == None:
+            return
+
+        current_time = time.perf_counter()
+        if (mouse_position - self.press_position).magnitude() > 0:
+            self.pressed_button_state = "DRAG"
+            self.drag_vector = mouse_position - self.press_position
+        elif current_time - self.press_time > self.min_hold_time:
+            self.pressed_button_state = "HOLD"
+
+    def register_callback(self, button, state, callback_func):
+        self._callback_dict[(button, state)] = callback_func
+
 
 
 
