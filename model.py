@@ -8,6 +8,7 @@ class Model():
         self._cellar.update()
 
     def place_node(self, position, orientation):
+        orientation = orientation.normalise(1.4)
         self._cellar.add_node(position, orientation)
 
     def delete_nodes(self, position):
@@ -22,7 +23,11 @@ class Model():
     def clear_signals(self):
         self._cellar.clear_signals()
 
-    def copy_nodes(self, bottom_left_vec, top_right_vec):
+    def copy_nodes(self, corner1, corner2):
+        bottom_left_vec = Vec(min(corner1.x, corner2.x),
+                              min(corner1.y, corner2.y))
+        top_right_vec = Vec(max(corner1.x, corner2.x),
+                            max(corner1.y, corner2.y))
         self._cellar.copy_nodes(bottom_left_vec, top_right_vec)
 
     def save_as(self, name):

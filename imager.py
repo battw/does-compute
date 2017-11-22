@@ -56,25 +56,27 @@ class CheckeredBackgroundImageData(ImageData):
 
 class IsoTriangleImageData(ImageData):
     def __init__(self, length, width, colour):
-        self._length = length
-        self._width = width
-        self._colour = colour
-        format = "RBGA"
-        data = self._make_bytes()
+        format = "RGBA"
+        data = self._make_bytes(length, width, colour)
         super(IsoTriangleImageData, self).__init__(width, length, format, data)
 
-    def _make_bytes(self):
+    def _make_bytes(self, length, width, colour):
         def is_inside_triangle(x, y):
 
-            return (x > y * self._width / 2 / self._length
-                    and x < self._width / 2 * (2 - y / self._length))
+            return (x > y * width / 2 / length
+                    and x < width / 2 * (2 - y / length))
 
         numbers = list()
-        for y in range(self._length):
-            for x in range(self._width):
+        for y in range(length):
+            for x in range(width):
                 if is_inside_triangle(x, y):
-                    numbers.extend(self._colour)
-                    numbers.extend((255,))
+                    numbers.extend(colour)
                 else:
                     numbers.extend((0,0,0,0))
         return bytes(numbers)
+
+class SquareImageData(ImageData):
+    def __init__(self, size, colour):
+        format = "RGBA"
+        data = bytes([*(colour) * size * size])
+        super(SquareImageData, self).__init__(size, size, format, data)

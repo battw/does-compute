@@ -47,4 +47,7 @@ class Vec():
         return self.to_tuple().__hash__()
 
     def __eq__(self, other):
-        return self.to_tuple() == other.to_tuple()
+        if isinstance(other, Vec):
+            return self.to_tuple() == other.to_tuple()
+        else:
+            return False
