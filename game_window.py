@@ -45,12 +45,10 @@ class GameWindow(pyglet.window.Window):
     def on_draw(self):
         self.mouse_input.update(self.mouse_position)
         self.drawer.draw_model()
-        self.drawer.draw_cursor_cell(self.mouse_position)
-        if self.mouse_input.pressed_button == 1:
-            orientation = (Vec(0,1) if self.mouse_input.drag_vector == None
-                                    else self.mouse_input.drag_vector)
-            self.drawer.draw_ghost_node(self.mouse_input.press_position,
-                                        orientation.normalise(1.4))
+        self.drawer.draw_gui(self.mouse_position)
+
+
+
 
     def cell_location(self, cell_index):
         return Vec(cell_index.x * self.cell_size + self.cell_size // 2
@@ -86,11 +84,12 @@ class _Drawer():
     def __init__(self, game_window):
         self._game_window = game_window
         self._signal_sprite = self._get_signal_sprite()
-        self._node_sprite = self._get_node_sprite((100, 100, 100, 255))
+        self._node_sprite = self._get_node_sprite((150, 150, 150, 255))
         self._neg_node_sprite = self._get_node_sprite((0, 0, 0, 255))
-        self._ghost_node_sprite = self._get_node_sprite((100, 100, 100, 255))
+        self._ghost_node_sprite = self._get_node_sprite((150, 150, 150, 150))
         self._background_image = self._get_background_image_data()
-        self._cursor_sprite = self._get_cursor_sprite()
+        self._cursor_sprite = self._get_cursor_sprite((100, 100, 200, 100))
+        self._held_cursor_sprite = self._get_cursor_sprite((0, 0, 0, 200))
 
 
     def draw_model(self):
@@ -108,17 +107,48 @@ class _Drawer():
     def draw_background(self):
         self._background_image.blit(0,0)
 
-    def draw_gui(self, input):
-        pass
-        #draw gui (currently the ghost node wotsit)
-    def draw_cursor_cell(self, cursor_position):
+    def draw_gui(self, mouse_position):
+        if self._game_window.mouse_input.pressed_button == 1:
+            orientation = (Vec(0,1) if self._game_window.mouse_input.drag_vector == None
+                                    else self._game_window.mouse_input.drag_vector)
+            self.draw_ghost_node(self._game_window.mouse_input.press_position,
+                                        orientation.normalise(1.4))
+        elif (self._game_window.mouse_input.pressed_button == 4
+        and self._game_window.mouse_input.pressed_button_state == "DRAG"
+        and isinstance(self._game_window.mouse_input.drag_vector, Vec)):
+            self.draw_select_box(self._game_window.mouse_input.press_position,
+                                        self._game_window.mouse_input.drag_vector)
+        elif (self._game_window.mouse_input.pressed_button == 4
+        and self._game_window.mouse_input.pressed_button_state == "HOLD"):
+            self.draw_cursor_cell(mouse_position, self._held_cursor_sprite)
+        else:
+            self.draw_cursor_cell(mouse_position, self._cursor_sprite)
+
+
+    def draw_select_box(self, position, drag_vector):
+        end_position = position + drag_vector
+        bottom_left_corner = Vec(min(position.x, end_position.x),
+                                 min(position.y, end_position.y))
+        up_vec = Vec(0, abs(drag_vector.y))
+        across_vec = Vec(abs(drag_vector.x), 0)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        pyglet.graphics.draw(4, GL_POLYGON,
+                             ('v2i',
+                              (*bottom_left_corner,
+                               *(bottom_left_corner + across_vec),
+                               *(bottom_left_corner + across_vec + up_vec),
+                               *(bottom_left_corner + up_vec)
+                              )),
+                             ('c4B', (0, 0, 255, 100) * 4))
+
+    def draw_cursor_cell(self, cursor_position, sprite):
         half_cell_size = self._game_window.cell_size // 2
         cell_location = (self._game_window.cell_location(
             self._game_window.position_to_cell_index(cursor_position))
             - Vec(half_cell_size, half_cell_size))
-
-        self._cursor_sprite.set_position(*cell_location)
-        self._cursor_sprite.draw()
+        sprite.set_position(*cell_location)
+        sprite.draw()
 
     def draw_node(self, cell_index, orientation, sprite):
         glEnable(GL_BLEND)
@@ -143,9 +173,9 @@ class _Drawer():
         self._signal_sprite.set_position(*position)
         self._signal_sprite.draw()
 
-    def _get_cursor_sprite(self):
+    def _get_cursor_sprite(self, colour):
         size = self._game_window.cell_size
-        image_data = imager.SquareImageData(size, (100, 100, 200, 100))
+        image_data = imager.SquareImageData(size, colour)
         return pyglet.sprite.Sprite(image_data)
 
     def _get_signal_sprite(self):
