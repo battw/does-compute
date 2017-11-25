@@ -3,6 +3,7 @@ from pyglet.gl import *
 from pyglet.window.key import *
 import itertools
 import time
+import pickle
 
 from model import Model, _Cellar
 from utils import Vec
@@ -16,68 +17,94 @@ class GameWindow(pyglet.window.Window):
             self.index = index
             self.orientation = orientation
 
+
     def __init__(self):
         super(GameWindow, self).__init__(width=2000, height=1000)
-        self.init_gl()
-        # glClearColor(1,1,1,1)
         self.cell_size = 20
         self.mouse_cell_index = Vec(-1,-1)
         self.mouse_position = Vec(0,0)
-        self.model = Model()
-        pyglet.clock.schedule_interval(self.model.update, 0.1)
-        # self.ghost_node = None
         self.drawer = _Drawer(self)
-        self.input_state_cycle = itertools.cycle(["DRAW", "COPY PASTE"])
-        self.input_state = next(self.input_state_cycle)
         self.set_mouse_visible(False)
-        self.mouse_input = MouseInputHandler()
-        model_input_wrapper = ModelInputWrapper(self.model, self.position_to_cell_index)
-        self.mouse_input.register_callback(1, "CLICK", model_input_wrapper.place_node)
-        self.mouse_input.register_callback(1, "DRAG", model_input_wrapper.place_node)
-        self.mouse_input.register_callback(4, "CLICK", model_input_wrapper.invert_nodes)
-        self.mouse_input.register_callback(4, "HOLD", model_input_wrapper.delete_nodes)
 
-    def init_gl(self):
-        # glEnable(GL_BLEND)
-        # glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        pass
+        self.load_model(Model())
+        self.set_input_state("DEFAULT")
+
+    def load_model(self, model):
+        self.model = model
+        pyglet.clock.schedule_interval(self.model.update, 0.1)
+        model_input_wrapper = ModelInputWrapper(self.model, self)
+        self.default_mouse_input = MouseInputHandler()
+        self.default_mouse_input.register_callback(
+            1, "CLICK", model_input_wrapper.place_node)
+        self.default_mouse_input.register_callback(
+            1, "DRAG", model_input_wrapper.place_node)
+        self.default_mouse_input.register_callback(
+            4, "CLICK", model_input_wrapper.invert_nodes)
+        self.default_mouse_input.register_callback(
+            4, "HOLD", model_input_wrapper.delete_nodes)
+        self.default_mouse_input.register_callback(
+            4, "DRAG", model_input_wrapper.copy_nodes)
+
+        self.paste_mouse_input = MouseInputHandler()
+        self.paste_mouse_input.register_callback(
+            1, "CLICK", model_input_wrapper.paste_nodes)
+        self.paste_mouse_input.register_callback(
+            4, "CLICK", model_input_wrapper.change_to_default_input_state)
+
+
+    def set_input_state(self, state):
+        self._input_state = state
+        if state == "DEFAULT":
+            self.current_mouse_input = self.default_mouse_input
+        elif state == "PASTE":
+            self.current_mouse_input = self.paste_mouse_input
+        else: raise Error("Tried to switch to an invalid state")
 
     def on_draw(self):
-        self.mouse_input.update(self.mouse_position)
+        self.current_mouse_input.update(self.mouse_position)
         self.drawer.draw_model()
         self.drawer.draw_gui(self.mouse_position)
 
-
-
-
-    def cell_location(self, cell_index):
+    def cell_position(self, cell_index):
         return Vec(cell_index.x * self.cell_size + self.cell_size // 2
         , cell_index.y * self.cell_size + self.cell_size // 2)
 
-    def position_to_cell_index(self, position):
+    def cell_index(self, position):
         return Vec(position.x // self.cell_size, position.y //self.cell_size)
 
     def on_mouse_motion(self, x, y, dx, dy):
         self.mouse_position = Vec(x,y)
-        self.mouse_cell_index = self.position_to_cell_index(Vec(x,y))
+        self.mouse_cell_index = self.cell_index(Vec(x,y))
 
     def on_mouse_press(self, x, y, button, modifiers):
-        self.mouse_input.press(button, Vec(x,y))
+        self.current_mouse_input.press(button, Vec(x,y))
 
     def on_mouse_drag(self, x, y, dx, dy, button, modifiers):
         self.mouse_position = Vec(x,y)
-        self.mouse_cell_index = self.position_to_cell_index(Vec(x,y))
+        self.mouse_cell_index = self.cell_index(Vec(x,y))
 
     def on_mouse_release(self, x, y, button, modifiers):
-        self.mouse_input.release(button)
+        self.current_mouse_input.release(button)
 
     def on_key_press(self, symbol, modifiers):
         super(GameWindow, self).on_key_press(symbol, modifiers)
         if symbol == SPACE:
             self.model.clear_signals()
-        if symbol == X:
-            self.input_state = next(self.input_state_cycle)
+        elif symbol == S:
+            self.save()
+        elif symbol == L:
+            self.load()
 
+
+
+    def save(self):
+        with open("sav", "wb") as handle:
+            pickle.dump(self.model, handle)
+
+    def load(self):
+        with open("sav", "rb") as handle:
+            self.load_model(pickle.loads(handle.read()))
+            self.set_input_state("DEFAULT")
 
 
 class _Drawer():
@@ -89,6 +116,7 @@ class _Drawer():
         self._ghost_node_sprite = self._get_node_sprite((150, 150, 150, 150))
         self._background_image = self._get_background_image_data()
         self._cursor_sprite = self._get_cursor_sprite((100, 100, 200, 100))
+        self._paste_cursor_sprite = self._get_cursor_sprite((100, 0, 0, 100))
         self._held_cursor_sprite = self._get_cursor_sprite((0, 0, 0, 200))
 
 
@@ -108,29 +136,40 @@ class _Drawer():
         self._background_image.blit(0,0)
 
     def draw_gui(self, mouse_position):
-        if self._game_window.mouse_input.pressed_button == 1:
-            orientation = (Vec(0,1) if self._game_window.mouse_input.drag_vector == None
-                                    else self._game_window.mouse_input.drag_vector)
-            self.draw_ghost_node(self._game_window.mouse_input.press_position,
-                                        orientation.normalise(1.4))
-        elif (self._game_window.mouse_input.pressed_button == 4
-        and self._game_window.mouse_input.pressed_button_state == "DRAG"
-        and isinstance(self._game_window.mouse_input.drag_vector, Vec)):
-            self.draw_select_box(self._game_window.mouse_input.press_position,
-                                        self._game_window.mouse_input.drag_vector)
-        elif (self._game_window.mouse_input.pressed_button == 4
-        and self._game_window.mouse_input.pressed_button_state == "HOLD"):
-            self.draw_cursor_cell(mouse_position, self._held_cursor_sprite)
-        else:
-            self.draw_cursor_cell(mouse_position, self._cursor_sprite)
+        if self._game_window._input_state == "DEFAULT":
+            if self._game_window.default_mouse_input.pressed_button == 1:
+                orientation = (Vec(0,1) if self._game_window.default_mouse_input.drag_vector == None
+                                        else self._game_window.default_mouse_input.drag_vector)
+                self.draw_ghost_node(self._game_window.default_mouse_input.press_position,
+                                            orientation.normalise(1.4))
+            elif (self._game_window.default_mouse_input.pressed_button == 4
+            and self._game_window.default_mouse_input.pressed_button_state == "DRAG"
+            and isinstance(self._game_window.default_mouse_input.drag_vector, Vec)):
+                self.draw_select_box(self._game_window.default_mouse_input.press_position,
+                                            self._game_window.default_mouse_input.drag_vector)
+            elif (self._game_window.default_mouse_input.pressed_button == 4
+            and self._game_window.default_mouse_input.pressed_button_state == "HOLD"):
+                self.draw_cursor_cell(mouse_position, self._held_cursor_sprite)
+            else:
+                self.draw_cursor_cell(mouse_position, self._cursor_sprite)
+        elif self._game_window._input_state == "PASTE":
+            self.draw_cursor_cell(mouse_position, self._paste_cursor_sprite)
+
 
 
     def draw_select_box(self, position, drag_vector):
         end_position = position + drag_vector
         bottom_left_corner = Vec(min(position.x, end_position.x),
                                  min(position.y, end_position.y))
-        up_vec = Vec(0, abs(drag_vector.y))
-        across_vec = Vec(abs(drag_vector.x), 0)
+        #snap to cell boundary
+        #THERE MUST BE A SIMPLER WAY TO FIND THE CORNERS
+        cell_size = self._game_window.cell_size
+        mod_x = bottom_left_corner.x % cell_size
+        mod_y = bottom_left_corner.y % cell_size
+        bottom_left_corner = Vec(bottom_left_corner.x // cell_size * cell_size,
+                                 bottom_left_corner.y // cell_size * cell_size)
+        across_vec = Vec((abs(drag_vector.x) + mod_x + cell_size) // cell_size * cell_size, 0)
+        up_vec = Vec(0, (abs(drag_vector.y) +  mod_y + cell_size) //  cell_size * cell_size)
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         pyglet.graphics.draw(4, GL_POLYGON,
@@ -144,8 +183,8 @@ class _Drawer():
 
     def draw_cursor_cell(self, cursor_position, sprite):
         half_cell_size = self._game_window.cell_size // 2
-        cell_location = (self._game_window.cell_location(
-            self._game_window.position_to_cell_index(cursor_position))
+        cell_location = (self._game_window.cell_position(
+            self._game_window.cell_index(cursor_position))
             - Vec(half_cell_size, half_cell_size))
         sprite.set_position(*cell_location)
         sprite.draw()
@@ -154,13 +193,13 @@ class _Drawer():
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         cell_size_vec = Vec(self._game_window.cell_size / 2, self._game_window.cell_size / 2)
-        position = self._game_window.cell_location(cell_index)
+        position = self._game_window.cell_position(cell_index)
         sprite.set_position(*position)
         sprite.rotation = -(orientation.angle() - 90)
         sprite.draw()
 
     def draw_ghost_node(self, position, orientation):
-        self.draw_node(self._game_window.position_to_cell_index(position), orientation,
+        self.draw_node(self._game_window.cell_index(position), orientation,
                            self._ghost_node_sprite)
 
     def draw_signal(self, cell_index):
@@ -169,7 +208,7 @@ class _Drawer():
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
         cell_size_vec = Vec(self._game_window.cell_size / 2, self._game_window.cell_size / 2)
-        position = self._game_window.cell_location(cell_index) - cell_size_vec
+        position = self._game_window.cell_position(cell_index) - cell_size_vec
         self._signal_sprite.set_position(*position)
         self._signal_sprite.draw()
 
@@ -257,17 +296,27 @@ class MouseInputHandler():
 
 
 class ModelInputWrapper():
-    def __init__(self, model, position_to_cell_func):
+    def __init__(self, model, game_window):
         """position_to_cell_func translates screen coordinates to
         cell indexes (as Vecs)."""
         self._model = model
-        self._position_to_cell_func = position_to_cell_func
+        self._game_window = game_window
+        self._position_to_cell_func = game_window.cell_index
 
     def place_node(self, press_position, drag_vector=Vec(0,1)):
-        self._model.place_node(self._position_to_cell_func(press_position), drag_vector)
+        self._model.place_node(
+            self._position_to_cell_func(press_position), drag_vector)
 
     def copy_nodes(self, press_position, drag_vector):
-        self._model.copy_nodes(press_position, press_position + drag_vector)
+        self._model.copy_nodes(self._position_to_cell_func(press_position),
+                               self._position_to_cell_func(press_position + drag_vector))
+        self._game_window.set_input_state("PASTE")
+
+    def paste_nodes(self, press_position):
+        self._model.paste_nodes(self._position_to_cell_func(press_position))
+
+    def change_to_default_input_state(self, press_position):
+        self._game_window.set_input_state("DEFAULT")
 
     def invert_nodes(self, press_position):
         self._model.invert_nodes(self._position_to_cell_func(press_position))

@@ -3,6 +3,7 @@ from utils import Vec
 class Model():
     def __init__(self):
         self._cellar = _Cellar()
+        self._copied_nodes = None
 
     def update(self, dt):
         self._cellar.update()
@@ -28,7 +29,10 @@ class Model():
                               min(corner1.y, corner2.y))
         top_right_vec = Vec(max(corner1.x, corner2.x),
                             max(corner1.y, corner2.y))
-        self._cellar.copy_nodes(bottom_left_vec, top_right_vec)
+        self._copied_nodes = self._cellar.copy_nodes(bottom_left_vec, top_right_vec)
+
+    def paste_nodes(self, bottom_left_position):
+        self._cellar.paste_nodes(bottom_left_position, self._copied_nodes)
 
     def save_as(self, name):
         pass
@@ -36,10 +40,10 @@ class Model():
 
 class _Cellar():
     class _Node():
-        def __init__(self, position, orientation):
+        def __init__(self, position, orientation, is_inverted=False):
             self.position = position
             self.orientation = orientation
-            self.is_inverted = False
+            self.is_inverted = is_inverted
 
         def output(self, cellar):
             '''Returns an output signal if approriate, None otherwise.'''
@@ -47,6 +51,10 @@ class _Cellar():
                 or
                 self.position not in cellar._signal_dict.keys() and self.is_inverted):
                 return _Cellar._Signal(self.position + self.orientation, self.orientation)
+
+        def __str__(self):
+            return "position = {}\norientation = {}".format(self.position,
+                                                            self.orientation)
 
 
     class _Signal():
@@ -82,10 +90,10 @@ class _Cellar():
         return vec.x > self._bounds.x or vec.y > self._bounds.y or vec.x < 0 or vec.y < 0
 
 
-    def add_node(self, position, orientation):
+    def add_node(self, position, orientation, is_inverted=False):
         '''Adds a node if there isn't currently one with the same position and
         orientation.'''
-        node = _Cellar._Node(position, orientation)
+        node = _Cellar._Node(position, orientation, is_inverted)
         if position not in self._node_dict.keys():
             self._node_dict[position] = list()
         if self._have_different_orientations(node, self._node_dict[position]):
@@ -100,10 +108,15 @@ class _Cellar():
             (x,y) = position
             return (bottom_left_vec.x <= x <= top_right_vec.x
                     and bottom_left_vec.y <= y <= top_right_vec.y)
-        included_node_dict_items = filter(lambda item: is_included(item[0]), self._node_dict.items())
-        print(dict(included_node_dict_items))
-        return dict(included_node_dict_items)
+        filtered_items = filter(lambda item: is_included(item[0]), self._node_dict.items())
+        translated_items = [(pos - bottom_left_vec, nodes) for (pos, nodes) in filtered_items]
+        return dict(translated_items)
 
+    def paste_nodes(self, bottom_left_position, node_dict):
+        for (pos, node_list) in node_dict.items():
+            for node in node_list:
+                self.add_node(pos + bottom_left_position, node.orientation,
+                              is_inverted=node.is_inverted)
 
     def invert_nodes(self, position):
         if position in self._node_dict.keys():

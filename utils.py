@@ -51,3 +51,9 @@ class Vec():
             return self.to_tuple() == other.to_tuple()
         else:
             return False
+
+    def __lt__(self, other):
+        if isinstance(other, Vec):
+            return self.to_tuple() < other.to_tuple()
+        else:
+            return False
