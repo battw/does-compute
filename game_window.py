@@ -37,6 +37,8 @@ class GameWindow(pyglet.window.Window):
         self.default_mouse_input.register_callback(
             1, "CLICK", model_input_wrapper.place_node)
         self.default_mouse_input.register_callback(
+            1, "HOLD", model_input_wrapper.place_node)
+        self.default_mouse_input.register_callback(
             1, "DRAG", model_input_wrapper.place_node)
         self.default_mouse_input.register_callback(
             4, "CLICK", model_input_wrapper.invert_nodes)
@@ -45,19 +47,40 @@ class GameWindow(pyglet.window.Window):
         self.default_mouse_input.register_callback(
             4, "DRAG", model_input_wrapper.copy_nodes)
 
-        self.paste_mouse_input = MouseInputHandler()
-        self.paste_mouse_input.register_callback(
+        self.pasting_mouse_input = MouseInputHandler()
+        self.pasting_mouse_input.register_callback(
             1, "CLICK", model_input_wrapper.paste_nodes)
-        self.paste_mouse_input.register_callback(
+        self.pasting_mouse_input.register_callback(
+            1, "HOLD", model_input_wrapper.paste_nodes)
+        self.pasting_mouse_input.register_callback(
             4, "CLICK", model_input_wrapper.change_to_default_input_state)
+        self.pasting_mouse_input.register_callback(
+            4, "HOLD", model_input_wrapper.change_to_default_input_state)
+        self.pasting_mouse_input.register_callback(
+            4, "DRAG", model_input_wrapper.change_to_default_input_state)
 
+        self.deleting_mouse_input = MouseInputHandler()
+        self.deleting_mouse_input.register_callback(
+            1, "DRAG", model_input_wrapper.delete_nodes
+        )
+        self.deleting_mouse_input.register_callback(
+            4, "CLICK", model_input_wrapper.change_to_default_input_state
+        )
+        self.deleting_mouse_input.register_callback(
+            4, "HOLD", model_input_wrapper.change_to_default_input_state
+        )
+        self.deleting_mouse_input.register_callback(
+            4, "DRAG", model_input_wrapper.change_to_default_input_state
+        )
 
     def set_input_state(self, state):
         self._input_state = state
         if state == "DEFAULT":
             self.current_mouse_input = self.default_mouse_input
-        elif state == "PASTE":
-            self.current_mouse_input = self.paste_mouse_input
+        elif state == "PASTING":
+            self.current_mouse_input = self.pasting_mouse_input
+        elif state == "DELETING":
+            self.current_mouse_input = self.deleting_mouse_input
         else: raise Error("Tried to switch to an invalid state")
 
     def on_draw(self):
@@ -94,8 +117,8 @@ class GameWindow(pyglet.window.Window):
             self.save()
         elif symbol == L:
             self.load()
-
-
+        elif symbol == D:
+            self.set_input_state("DELETING")
 
     def save(self):
         with open("sav", "wb") as handle:
@@ -116,8 +139,9 @@ class _Drawer():
         self._ghost_node_sprite = self._get_node_sprite((150, 150, 150, 150))
         self._background_image = self._get_background_image_data()
         self._cursor_sprite = self._get_cursor_sprite((100, 100, 200, 100))
-        self._paste_cursor_sprite = self._get_cursor_sprite((100, 0, 0, 100))
+        self._pasting_cursor_sprite = self._get_cursor_sprite((100, 0, 0, 100))
         self._held_cursor_sprite = self._get_cursor_sprite((0, 0, 0, 200))
+        self._deleting_cursor_sprite = self._get_cursor_sprite((0,0,0,100))
 
 
     def draw_model(self):
@@ -137,27 +161,37 @@ class _Drawer():
 
     def draw_gui(self, mouse_position):
         if self._game_window._input_state == "DEFAULT":
-            if self._game_window.default_mouse_input.pressed_button == 1:
-                orientation = (Vec(0,1) if self._game_window.default_mouse_input.drag_vector == None
-                                        else self._game_window.default_mouse_input.drag_vector)
-                self.draw_ghost_node(self._game_window.default_mouse_input.press_position,
+            mouse_input = self._game_window.default_mouse_input
+            if mouse_input.pressed_button == 1:
+                orientation = (Vec(0,1) if mouse_input.drag_vector == None
+                                        else mouse_input.drag_vector)
+                self.draw_ghost_node(mouse_input.press_position,
                                             orientation.normalise(1.4))
-            elif (self._game_window.default_mouse_input.pressed_button == 4
-            and self._game_window.default_mouse_input.pressed_button_state == "DRAG"
-            and isinstance(self._game_window.default_mouse_input.drag_vector, Vec)):
-                self.draw_select_box(self._game_window.default_mouse_input.press_position,
-                                            self._game_window.default_mouse_input.drag_vector)
-            elif (self._game_window.default_mouse_input.pressed_button == 4
-            and self._game_window.default_mouse_input.pressed_button_state == "HOLD"):
+            elif (mouse_input.pressed_button == 4
+                and mouse_input.pressed_button_state == "DRAG"
+                and isinstance(mouse_input.drag_vector, Vec)):
+                self.draw_select_box(mouse_input.press_position,
+                                            mouse_input.drag_vector)
+            elif (mouse_input.pressed_button == 4
+                  and mouse_input.pressed_button_state == "HOLD"):
                 self.draw_cursor_cell(mouse_position, self._held_cursor_sprite)
             else:
                 self.draw_cursor_cell(mouse_position, self._cursor_sprite)
-        elif self._game_window._input_state == "PASTE":
-            self.draw_cursor_cell(mouse_position, self._paste_cursor_sprite)
+        elif self._game_window._input_state == "PASTING":
+            self.draw_cursor_cell(mouse_position, self._pasting_cursor_sprite)
+        elif self._game_window._input_state == "DELETING":
+            mouse_input = self._game_window.deleting_mouse_input
+            if (mouse_input.pressed_button == 1
+                and mouse_input.pressed_button_state == "DRAG"):
+                self.draw_delete_box(mouse_input.press_position,
+                                     mouse_input.drag_vector)
+            else:
+                self.draw_cursor_cell(mouse_position, self._deleting_cursor_sprite)
 
 
 
-    def draw_select_box(self, position, drag_vector):
+
+    def draw_box(self, position, drag_vector, colour):
         end_position = position + drag_vector
         bottom_left_corner = Vec(min(position.x, end_position.x),
                                  min(position.y, end_position.y))
@@ -179,7 +213,13 @@ class _Drawer():
                                *(bottom_left_corner + across_vec + up_vec),
                                *(bottom_left_corner + up_vec)
                               )),
-                             ('c4B', (0, 0, 255, 100) * 4))
+                             ('c4B', colour * 4))
+
+    def draw_select_box(self, start_position, drag_vector):
+        self.draw_box(start_position, drag_vector, (0, 0, 255, 100))
+
+    def draw_delete_box(self, start_position, drag_vector):
+        self.draw_box(start_position, drag_vector, (0, 0, 0, 100))
 
     def draw_cursor_cell(self, cursor_position, sprite):
         half_cell_size = self._game_window.cell_size // 2
@@ -309,8 +349,9 @@ class ModelInputWrapper():
 
     def copy_nodes(self, press_position, drag_vector):
         self._model.copy_nodes(self._position_to_cell_func(press_position),
-                               self._position_to_cell_func(press_position + drag_vector))
-        self._game_window.set_input_state("PASTE")
+                               self._position_to_cell_func(press_position
+                                                           + drag_vector))
+        self._game_window.set_input_state("PASTING")
 
     def paste_nodes(self, press_position):
         self._model.paste_nodes(self._position_to_cell_func(press_position))
@@ -321,8 +362,10 @@ class ModelInputWrapper():
     def invert_nodes(self, press_position):
         self._model.invert_nodes(self._position_to_cell_func(press_position))
 
-    def delete_nodes(self, press_position):
-        self._model.delete_nodes(self._position_to_cell_func(press_position))
+    def delete_nodes(self, press_position, drag_vector=None):
+        self._model.delete_nodes(self._position_to_cell_func(press_position),
+                                 self._position_to_cell_func(press_position
+                                                             + drag_vector))
 
 
 if __name__ == '__main__':

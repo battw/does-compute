@@ -12,8 +12,27 @@ class Model():
         orientation = orientation.normalise(1.4)
         self._cellar.add_node(position, orientation)
 
-    def delete_nodes(self, position):
-        self._cellar.delete_nodes(position)
+    def delete_nodes(self, a_position, b_position=None):
+        """Deletes the nodes at a_position or if b_position is defined the nodes
+        in the square defined by the two positions"""
+        if b_position == None:
+            self._cellar.delete_nodes(a_position)
+        else:
+            bottom_left_corner, top_right_corner = self._get_corners(a_position,
+                                                                     b_position)
+            for x in range(bottom_left_corner.x, top_right_corner.x + 1):
+                for y in range(bottom_left_corner.y, top_right_corner.y + 1):
+                    self._cellar.delete_nodes(Vec(x,y))
+
+
+    def _get_corners(self, a_position, b_position):
+        """Taking the square defined by the input positions, returns the
+        bottom left corner and the top left corner as a tuple"""
+        bottom_left_corner = Vec(min(a_position.x, b_position.x),
+                                 min(a_position.y, b_position.y))
+        top_right_corner = Vec(max(a_position.x, b_position.x),
+                               max(a_position.y, b_position.y))
+        return bottom_left_corner, top_right_corner
 
     def invert_nodes(self, position):
         self._cellar.invert_nodes(position)
@@ -25,17 +44,17 @@ class Model():
         self._cellar.clear_signals()
 
     def copy_nodes(self, corner1, corner2):
-        bottom_left_vec = Vec(min(corner1.x, corner2.x),
-                              min(corner1.y, corner2.y))
-        top_right_vec = Vec(max(corner1.x, corner2.x),
-                            max(corner1.y, corner2.y))
-        self._copied_nodes = self._cellar.copy_nodes(bottom_left_vec, top_right_vec)
+        bottom_left_corner, top_right_corner = self._get_corners(corner1,
+                                                                 corner2)
+        self._copied_nodes = self._cellar.copy_nodes(bottom_left_corner,
+                                                     top_right_corner)
 
     def paste_nodes(self, bottom_left_position):
         self._cellar.paste_nodes(bottom_left_position, self._copied_nodes)
 
     def save_as(self, name):
         pass
+
 
 
 class _Cellar():
@@ -47,10 +66,13 @@ class _Cellar():
 
         def output(self, cellar):
             '''Returns an output signal if approriate, None otherwise.'''
-            if (self.position in cellar._signal_dict.keys() and not self.is_inverted
+            if (self.position in cellar._signal_dict.keys() and
+                not self.is_inverted
                 or
-                self.position not in cellar._signal_dict.keys() and self.is_inverted):
-                return _Cellar._Signal(self.position + self.orientation, self.orientation)
+                self.position not in cellar._signal_dict.keys() and
+                self.is_inverted):
+                return _Cellar._Signal(self.position + self.orientation,
+                                       self.orientation)
 
         def __str__(self):
             return "position = {}\norientation = {}".format(self.position,
@@ -66,7 +88,8 @@ class _Cellar():
             '''Returns a new Signal representing the forward movement of this
             Signal, or None if this signal terminates.'''
             if self.position not in cellar._node_dict.keys():
-                return _Cellar._Signal(self.position + self.orientation, self.orientation)
+                return _Cellar._Signal(self.position + self.orientation,
+                                       self.orientation)
 
     def __init__(self):
         self._signal_dict = dict()
