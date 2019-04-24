@@ -1,0 +1,34 @@
+* Does Compute 
+** Intro
+An interactive tool to illustrate how, using a single type of simple component, 
+it is possible to build computers.
+
+** Run 
+To run you need the pyglet library installed for python 3+.
+You can install it using PIP or your package manager.
+Run the program from the command line:
+#+BEGIN_SRC bash
+python3 game_window.py
+#+END_SRC
+
+** Play
+*** Basics 
+- Esc exit.
+- Left click and drag to place nodes and choose their direction. 
+- Right click the nodes to invert them. They will turn black and output a signal.
+- Right clicking them again will change them back.
+- Multiple nodes can be placed on top of each other if they are pointing in different directions.
+
+*** Delete 
+- Press d on your keyboard to enter delete mode.
+- Left drag to delete.
+- Right click to exit delete mode.
+  
+*** Copy
+- Right drag copies an area and enters copy mode (red cursor).
+- Left click pastes.
+- Right click exits copy mode. 
+
+*** Save/Load
+- 's' on your keyboard saves the current layout as a file named "sav".
+- 'l' loads a layout from a file named "sav" if there is one. 
