@@ -56,8 +56,8 @@ class GameWindow(pyglet.window.Window):
             4, "CLICK", model_input_wrapper.change_to_default_input_state)
         self.pasting_mouse_input.register_callback(
             4, "HOLD", model_input_wrapper.change_to_default_input_state)
-        self.pasting_mouse_input.register_callback(
-            4, "DRAG", model_input_wrapper.change_to_default_input_state)
+        # self.pasting_mouse_input.register_callback(
+        #     4, "DRAG", model_input_wrapper.change_to_default_input_state)
 
         self.deleting_mouse_input = MouseInputHandler()
         self.deleting_mouse_input.register_callback(
@@ -69,9 +69,9 @@ class GameWindow(pyglet.window.Window):
         self.deleting_mouse_input.register_callback(
             4, "HOLD", model_input_wrapper.change_to_default_input_state
         )
-        self.deleting_mouse_input.register_callback(
-            4, "DRAG", model_input_wrapper.change_to_default_input_state
-        )
+        # self.deleting_mouse_input.register_callback(
+        #     4, "DRAG", model_input_wrapper.change_to_default_input_state
+        # )
 
     def set_input_state(self, state):
         self._input_state = state
