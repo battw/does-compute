@@ -32,3 +32,10 @@ python3 game_window.py
 *** Save/Load
 - 's' on your keyboard saves the current layout as a file named "sav".
 - 'l' loads a layout from a file named "sav" if there is one. 
+ 
+*** Load examples
+To load examples from the examples directory, copy the file into the main directory and rename it "sav".
+Run the program as usual and press "l" to load "sav".
+
+** TODO  
+- Change saves to use a human readable format e.g. json.
