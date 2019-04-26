@@ -20,7 +20,7 @@ python3 game_window.py
 - Multiple nodes can be placed on top of each other if they are pointing in different directions.
 
 *** Delete 
-- Press d on your keyboard to enter delete mode.
+- Press "d" or middle mouse button to enter delete mode.
 - Left drag to delete.
 - Right click to exit delete mode.
   

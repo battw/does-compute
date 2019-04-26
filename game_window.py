@@ -17,7 +17,6 @@ class GameWindow(pyglet.window.Window):
             self.index = index
             self.orientation = orientation
 
-
     def __init__(self):
         super(GameWindow, self).__init__(width=2000, height=1000)
         self.cell_size = 20
@@ -30,48 +29,49 @@ class GameWindow(pyglet.window.Window):
         self.set_input_state("DEFAULT")
 
     def load_model(self, model):
-        self.model = model
+        self.model = model 
         pyglet.clock.schedule_interval(self.model.update, 0.1)
+        self.register_callbacks()
+        
+        
+    def register_callbacks(self):
+        LMB, MMB, RMB = 1, 2, 4
         model_input_wrapper = ModelInputWrapper(self.model, self)
         self.default_mouse_input = MouseInputHandler()
         self.default_mouse_input.register_callback(
-            1, "CLICK", model_input_wrapper.place_node)
+            LMB, "CLICK", model_input_wrapper.place_node)
         self.default_mouse_input.register_callback(
-            1, "HOLD", model_input_wrapper.place_node)
+            LMB, "HOLD", model_input_wrapper.place_node)
         self.default_mouse_input.register_callback(
-            1, "DRAG", model_input_wrapper.place_node)
+            LMB, "DRAG", model_input_wrapper.place_node)
         self.default_mouse_input.register_callback(
-            4, "CLICK", model_input_wrapper.invert_nodes)
+            RMB, "CLICK", model_input_wrapper.invert_nodes)
         self.default_mouse_input.register_callback(
-            4, "HOLD", model_input_wrapper.delete_nodes)
+            RMB, "HOLD", model_input_wrapper.delete_nodes)
         self.default_mouse_input.register_callback(
-            4, "DRAG", model_input_wrapper.copy_nodes)
+            RMB, "DRAG", model_input_wrapper.copy_nodes)
+        self.default_mouse_input.register_callback(
+            MMB, "CLICK", lambda _ : self.set_input_state("DELETING"))
 
         self.pasting_mouse_input = MouseInputHandler()
         self.pasting_mouse_input.register_callback(
-            1, "CLICK", model_input_wrapper.paste_nodes)
+            LMB, "CLICK", model_input_wrapper.paste_nodes)
         self.pasting_mouse_input.register_callback(
-            1, "HOLD", model_input_wrapper.paste_nodes)
+            LMB, "HOLD", model_input_wrapper.paste_nodes)
         self.pasting_mouse_input.register_callback(
-            4, "CLICK", model_input_wrapper.change_to_default_input_state)
+            RMB, "CLICK", model_input_wrapper.change_to_default_input_state)
         self.pasting_mouse_input.register_callback(
-            4, "HOLD", model_input_wrapper.change_to_default_input_state)
-        # self.pasting_mouse_input.register_callback(
-        #     4, "DRAG", model_input_wrapper.change_to_default_input_state)
+            RMB, "HOLD", model_input_wrapper.change_to_default_input_state)
 
         self.deleting_mouse_input = MouseInputHandler()
         self.deleting_mouse_input.register_callback(
-            1, "DRAG", model_input_wrapper.delete_nodes
-        )
+            LMB, "CLICK", model_input_wrapper.delete_nodes)
         self.deleting_mouse_input.register_callback(
-            4, "CLICK", model_input_wrapper.change_to_default_input_state
-        )
+            LMB, "DRAG", model_input_wrapper.delete_nodes)
         self.deleting_mouse_input.register_callback(
-            4, "HOLD", model_input_wrapper.change_to_default_input_state
-        )
-        # self.deleting_mouse_input.register_callback(
-        #     4, "DRAG", model_input_wrapper.change_to_default_input_state
-        # )
+            RMB, "CLICK", model_input_wrapper.change_to_default_input_state)
+        self.deleting_mouse_input.register_callback(
+            RMB, "HOLD", model_input_wrapper.change_to_default_input_state)
 
     def set_input_state(self, state):
         self._input_state = state
@@ -363,11 +363,24 @@ class ModelInputWrapper():
         self._model.invert_nodes(self._position_to_cell_func(press_position))
 
     def delete_nodes(self, press_position, drag_vector=None):
-        self._model.delete_nodes(self._position_to_cell_func(press_position),
-                                 self._position_to_cell_func(press_position
-                                                             + drag_vector))
+        if drag_vector:
+            self._model.delete_nodes(self._position_to_cell_func(press_position),
+                                     self._position_to_cell_func(press_position
+                                                                 + drag_vector))
+        else:
+            self._model.delete_nodes(self._position_to_cell_func(press_position))
+            
 
 
 if __name__ == '__main__':
     window = GameWindow()
     pyglet.app.run()
+
+
+
+
+
+
+
+
+
